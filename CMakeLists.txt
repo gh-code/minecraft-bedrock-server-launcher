@@ -15,12 +15,14 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 endif()
 
+IF(WIN32)
 set(Boost_ROOT "c:/boost_1_83_0")
 set(Boost_ARCHITECTURE "-x32")
+ENDIF(WIN32)
 
 find_package(Threads REQUIRED)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
-find_package(Boost COMPONENTS filesystem REQUIRED)
+find_package(Boost COMPONENTS regex filesystem REQUIRED)
 
 include_directories(include)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -33,8 +35,16 @@ add_executable(launcher
     main.cpp
     mainwindow.cpp)
 
+IF(WIN32)
 target_link_libraries(launcher
     Qt5::Widgets
     ${Boost_LIBRARIES}
     ws2_32
 )
+ELSE()
+target_link_libraries(launcher
+    Qt5::Widgets
+    ${Boost_LIBRARIES}
+    -pthread
+)
+ENDIF(WIN32)
