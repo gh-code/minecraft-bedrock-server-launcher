@@ -29,20 +29,25 @@ namespace bp = boost::process;
 inline void
 fail(boost::system::error_code ec, char const* what)
 {
+    std::cerr << ec.to_string() << std::endl;
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
-class wrapper : public std::enable_shared_from_this<wrapper>
+class reader : public std::enable_shared_from_this<reader>
 {
     bp::async_pipe& ap_;
-    boost::asio::streambuf buffer_;
+    std::string buffer_;
     router& router_;
 
 public:
-    wrapper(router& r, bp::async_pipe& ap)
+    reader(router& r, bp::async_pipe& ap)
     : ap_(ap)
-    , buffer_(128)
+    , buffer_()
     , router_(r)
+    { }
+
+    /// Destructor
+    ~reader()
     { }
 
     auto run() -> void
@@ -53,9 +58,9 @@ public:
     auto do_read() -> void
     {
         using namespace std::placeholders;
-        boost::asio::async_read_until(ap_, buffer_, '\n',
+        boost::asio::async_read_until(ap_, boost::asio::dynamic_buffer(buffer_), '\n',
             std::bind(
-                &wrapper::on_read,
+                &reader::on_read,
                 shared_from_this(),
                 _1, _2));
     }
@@ -64,26 +69,35 @@ public:
         boost::system::error_code ec,
         std::size_t size) -> void
     {
+        if (ec == boost::asio::error::broken_pipe) {
+            return do_close();
+        }
+
         if (ec) {
             return fail(ec, "read");
         }
 
-        std::string line;
-        if (std::getline(std::istream(&buffer_), line)) {
-            std::cout << line << "\n";
-            const auto& rules = router_.get_table();
-            for (const auto& rule : rules) {
-                boost::regex pattern(std::string(rule.first));
-                boost::smatch matches;
-                if (boost::regex_search(line, matches, pattern)) {
-                    rule.second(router::Matches{matches.begin(), matches.end()});
-                    break;
-                }
+        std::string line = buffer_.substr(0, size - 1);
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        buffer_.erase(0, size);
+        std::cout << line << "\n";
+        const auto& rules = router_.get_table();
+        for (const auto& rule : rules) {
+            boost::regex pattern(std::string(rule.first));
+            boost::smatch matches;
+            if (boost::regex_search(line, matches, pattern)) {
+                rule.second(router::Matches{matches.begin(), matches.end()});
+                break;
             }
         }
 
         do_read();
     }
+
+    auto do_close() -> void
+    { ap_.close(); }
 };
 
 /** Shell for interactive from user inputs and auto command.
@@ -97,15 +111,19 @@ class shell : public router
 
 public:
     /// Command is read from string
-    shell(const char* command, boost::asio::io_service &ios)
+    shell(const char* command, boost::asio::io_service &ios,
+        const std::function<void(int, const std::error_code&)>& f)
     : os()
     , ap(ios)
     , c(command,
         bp::std_in < os,
         bp::std_out > ap,
-        bp::std_err > ap)
+        bp::std_err > ap, ios, bp::on_exit=[&](int exit_code, const std::error_code& ec){
+            t.detach();
+            f(exit_code, ec);
+        })
     {
-        std::make_shared<wrapper>(*this, ap)->run();
+        std::make_shared<reader>(*this, ap)->run();
 
         // must be interactive
         // if (!isatty(fileno(stdin))) { /* error */ }
@@ -134,9 +152,9 @@ public:
     }
 
     auto running() -> bool { return c.running(); }
-    auto terminate() -> void { c.terminate(); t.detach(); }
+    auto terminate() -> void { c.terminate(); }
     auto prompt() -> std::ostream& { return os; }
-    auto exit_code() -> int { c.exit_code(); }
+    auto exit_code() -> int { return c.exit_code(); }
 };
 
 } // namespace system

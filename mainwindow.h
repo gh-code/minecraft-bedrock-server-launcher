@@ -34,7 +34,7 @@ private:
 private slots:
     void exit_app();
     void backup();
-    void control();
+    void list();
 };
 
 #endif // MAINWINDOW_H

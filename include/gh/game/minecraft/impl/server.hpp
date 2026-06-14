@@ -17,6 +17,7 @@ inline
 auto server::update() -> int
 {
     prompt() << "update" << std::endl;
+    return 0;
 }
 
 inline

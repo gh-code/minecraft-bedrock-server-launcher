@@ -12,15 +12,15 @@ MainWindow::MainWindow(bedrock_server& server_, QWidget *parent)
     : server(server_)
     , QWidget(parent)
 {
-    auto control_button = new QPushButton(tr("Control"), this);
+    auto list_button = new QPushButton(tr("List players"), this);
     backup_button = new QPushButton(tr("Backup"), this);
 
     auto layout = new QVBoxLayout;
-    layout->addWidget(control_button);
+    layout->addWidget(list_button);
     layout->addWidget(backup_button);
     setLayout(layout);
 
-    connect(control_button, SIGNAL(clicked()), this, SLOT(control()));
+    connect(list_button, SIGNAL(clicked()), this, SLOT(list()));
     connect(backup_button, SIGNAL(clicked()), this, SLOT(backup()));
 
     setWindowTitle(tr("Main Window"));

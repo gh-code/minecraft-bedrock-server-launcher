@@ -20,9 +20,9 @@ void MainWindow::backup()
     std::thread(std::bind(&server_type::backup, &server)).detach();
 }
 
-void MainWindow::control()
+void MainWindow::list()
 {
-    server.prompt() << "control" << std::endl;
+    server.prompt() << "list" << std::endl;
 }
 
 template<class Timer>
@@ -61,58 +61,68 @@ auto main(int argc, char* argv[]) -> int
 
     QApplication app(argc, argv);
 
-    ::size_t num_players = 0;
+    int rc = 0;
+    try {
+        ::size_t num_players = 0;
 
-    boost::asio::io_service ios;
-    bedrock::server server(command, ios);
-
-    MainWindow window(server);
-
-    gh::system::timer tm_(ios, std::chrono::minutes(5), [&window](){
-        window.backup_button->click();
-        return true;
-    });
-    auto tm = make_echo_timer(tm_);
-
-    server.get("Player connected: ([^,]+), xuid: (\\d{16})$",
-        [&tm,&num_players](Matches matches){
-            auto const& user = matches[1];
-            auto const& xuid = matches[2];
-            if (num_players == 0) {
-                tm.start();
-            }
-            ++num_players;
+        boost::asio::io_service ios;
+        boost::asio::signal_set ss(ios, SIGINT, SIGTERM);
+        bedrock::server server(command, ios, [&](int, const std::error_code&){
+            app.exit();
         });
-    server.get("Player disconnected: ([^,]+), xuid: (\\d{16}),",
-        [&tm,&num_players](Matches matches){
-            auto const& user = matches[1];
-            auto const& xuid = matches[2];
-            if (num_players > 0) {
-                --num_players;
+        ss.async_wait([&](const boost::system::error_code&, int){
+            if (server.running()) {
+                server.prompt() << "stop" << std::endl;
+            }
+            app.exit();
+        });
+
+        MainWindow window(server);
+
+        gh::system::timer tm_(ios, std::chrono::minutes(5), [&window](){
+            window.backup_button->click();
+            return true;
+        });
+        auto tm = make_echo_timer(tm_);
+
+        server.get("Player connected: ([^,]+), xuid: (\\d{16})$",
+            [&tm,&num_players](Matches matches){
+                auto const& user = matches[1];
+                auto const& xuid = matches[2];
                 if (num_players == 0) {
-                    tm.stop();
+                    tm.start();
                 }
-            }
-        });
+                ++num_players;
+            });
+        server.get("Player disconnected: ([^,]+), xuid: (\\d{16}),",
+            [&tm,&num_players](Matches matches){
+                auto const& user = matches[1];
+                auto const& xuid = matches[2];
+                if (num_players > 0) {
+                    --num_players;
+                    if (num_players == 0) {
+                        tm.stop();
+                    }
+                }
+            });
 
-    boost::asio::signal_set ss(ios, SIGINT, SIGTERM);
-    ss.async_wait([&](boost::system::error_code ec, int signal_number){
-        app.exit();
-    });
+        window.show();
 
-    window.show();
+        // event loops
+        std::thread t([&ios]() { ios.run(); });
+        app.exec();
 
-    // event loops
-    std::thread t([&ios]() { ios.run(); });
-    app.exec();
-
-    // server.prompt() << "stop" << std::endl;
-    server.terminate();
-    ios.stop();
-
-    t.join(); // wait for ios
+        if (server.running()) {
+            server.prompt() << "stop" << std::endl;
+        }
+        t.join(); // wait for ios
+        rc = server.exit_code();
+    } catch (const boost::process::process_error& e) {
+        std::cout << e.what() << "\n"
+                  << "Probably command path is wrong.\n";
+    }
 
     puts("exit gracefully");
 
-    return server.exit_code();
+    return rc;
 }

@@ -21,8 +21,9 @@ namespace bedrock {
 class server : public system::shell
 {
 public:
-    server(const char* command, boost::asio::io_service &ios)
-    : shell(command, ios)
+    server(const char* command, boost::asio::io_service &ios,
+        const std::function<void(int, const std::error_code&)>& f)
+    : shell(command, ios, f)
     { }
 
     auto update() -> int;
