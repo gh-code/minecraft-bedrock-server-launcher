@@ -19,7 +19,6 @@ void MainWindow::list()
     server.prompt() << "list" << std::endl;
 }
 
-
 template<class Timer>
 class echo_timer
 {
@@ -81,22 +80,24 @@ auto main(int argc, char* argv[]) -> int
         auto tm = make_echo_timer(tm_);
 
         server.get("Player connected: ([^,]+), xuid: (\\d{16})$",
-            [&tm,&num_players](Matches matches){
+            [&tm,&num_players,&window](Matches matches){
                 auto const& user = matches[1];
                 auto const& xuid = matches[2];
                 if (num_players == 0) {
+                    window.backup_button->click();
                     tm.start();
                 }
                 ++num_players;
             });
         server.get("Player disconnected: ([^,]+), xuid: (\\d{16}),",
-            [&tm,&num_players](Matches matches){
+            [&tm,&num_players,&window](Matches matches){
                 auto const& user = matches[1];
                 auto const& xuid = matches[2];
                 if (num_players > 0) {
                     --num_players;
                     if (num_players == 0) {
                         tm.stop();
+                        window.backup_button->click();
                     }
                 }
             });
@@ -110,6 +111,7 @@ auto main(int argc, char* argv[]) -> int
         if (server.running()) {
             server.prompt() << "stop" << std::endl;
         }
+        tm_.stop(); // cancel timer to prevent it from running after server is stopped
         t.join(); // wait for ios
         rc = server.exit_code();
     } catch (const boost::process::process_error& e) {

@@ -31,7 +31,9 @@ MESSAGE(STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}")
 add_executable(launcher
     src/main.cpp
     src/gui/mainwindow.cpp
-    src/gui/backupWorker.cpp)
+    src/gui/backupWorker.cpp
+    src/system/uploader.cpp
+    src/utility/logger.cpp)
 
 target_include_directories(launcher PRIVATE include)
 target_include_directories(launcher SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
@@ -41,11 +43,13 @@ target_link_libraries(launcher
     Qt5::Widgets
     ${Boost_LIBRARIES}
     ws2_32
+    -lz
 )
 ELSE()
 target_link_libraries(launcher
     Qt5::Widgets
     ${Boost_LIBRARIES}
     -pthread
+    -lz
 )
 ENDIF(WIN32)

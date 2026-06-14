@@ -18,7 +18,9 @@ MainWindow::MainWindow(bedrock_server& server_, QWidget *parent)
     , QWidget(parent)
 {
     auto list_button = new QPushButton(tr("List players"), this);
+    list_button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     backup_button = new QPushButton(tr("Backup"), this);
+    backup_button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
     auto layout = new QVBoxLayout;
     layout->addWidget(list_button);
@@ -28,7 +30,7 @@ MainWindow::MainWindow(bedrock_server& server_, QWidget *parent)
     connect(list_button, SIGNAL(clicked()), this, SLOT(list()));
     connect(backup_button, SIGNAL(clicked()), this, SLOT(backup()));
 
-    setWindowTitle(tr("Main Window"));
+    setWindowTitle(tr("Control Panel"));
 }
 
 void MainWindow::backup()

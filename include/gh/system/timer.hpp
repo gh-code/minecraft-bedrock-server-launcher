@@ -27,7 +27,7 @@ public:
     )
         : timer_(ios, expiry_time)
         , interval_(expiry_time)
-        , callback_(std::move(callback))
+        , callback_(std::forward<Callback>(callback))
     { }
 
     auto start() -> void
