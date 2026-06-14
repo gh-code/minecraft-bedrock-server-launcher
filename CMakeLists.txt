@@ -24,16 +24,17 @@ find_package(Threads REQUIRED)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Boost COMPONENTS regex filesystem REQUIRED)
 
-include_directories(include)
-include_directories(${Boost_INCLUDE_DIRS})
-
 MESSAGE(STATUS "Boost_INCLUDE_DIRS = ${Boost_INCLUDE_DIRS}")
 MESSAGE(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
 MESSAGE(STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}")
 
 add_executable(launcher
-    main.cpp
-    mainwindow.cpp)
+    src/main.cpp
+    src/gui/mainwindow.cpp
+    src/gui/backupWorker.cpp)
+
+target_include_directories(launcher PRIVATE include)
+target_include_directories(launcher SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
 IF(WIN32)
 target_link_libraries(launcher

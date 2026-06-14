@@ -30,11 +30,13 @@ public:
 
 private:
     bedrock_server& server;
+    bool isBackingUp = false;
 
 private slots:
     void exit_app();
     void backup();
     void list();
+    void onBackupFinished();
 };
 
 #endif // MAINWINDOW_H

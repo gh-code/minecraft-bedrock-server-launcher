@@ -2,7 +2,7 @@
 // Copyright (c) 2024 Gary Huang (ghuang dot nctu at gmail dot com)
 //
 
-#include "mainwindow.h"
+#include "gui/mainwindow.h"
 
 #include <QApplication>
 
@@ -14,16 +14,11 @@
 
 #include <csignal>
 
-void MainWindow::backup()
-{
-    typedef std::remove_reference<decltype(server)>::type server_type;
-    std::thread(std::bind(&server_type::backup, &server)).detach();
-}
-
 void MainWindow::list()
 {
     server.prompt() << "list" << std::endl;
 }
+
 
 template<class Timer>
 class echo_timer
