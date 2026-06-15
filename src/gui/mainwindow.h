@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2024 Gary Huang (ghuang dot nctu at gmail dot com)
+// Copyright (c) 2026 Gary Huang (ghuang dot nctu at gmail dot com)
 //
 
 #ifndef MAINWINDOW_H
@@ -7,6 +7,8 @@
 
 #include <QWidget>
 #include <QPushButton>
+
+class QComboBox;
 
 namespace gh {
 namespace game {
@@ -26,6 +28,9 @@ class MainWindow : public QWidget
 public:
     MainWindow(bedrock_server& server, QWidget *parent = nullptr);
 
+    void loadSettings();
+
+    QComboBox* backup_methods;
     QPushButton* backup_button;
 
 private:
@@ -33,6 +38,7 @@ private:
     bool isBackingUp = false;
 
 private slots:
+    void saveSettings();
     void exit_app();
     void backup();
     void list();

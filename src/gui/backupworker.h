@@ -9,15 +9,17 @@
 
 #include <atomic>
 #include <functional>
+#include <thread>
 
 class BackupWorker : public QObject
 {
     Q_OBJECT
 public:
-    BackupWorker(std::function<int()> backupFunc)
-    : backupFunction(backupFunc)
+    BackupWorker(std::function<int(std::function<void(int)>, std::atomic<bool>&)> backupFunc)
+    : backupFunction(std::move(backupFunc))
     , shouldStop(false)
     { }
+    ~BackupWorker();
 
 signals:
     void progressUpdated(int value);
@@ -28,7 +30,8 @@ public slots:
     void stopWork();
 
 private:
-    std::function<int()> backupFunction;
+    std::function<int(std::function<void(int)>, std::atomic<bool>&)> backupFunction;
+    std::thread thread;
     std::atomic<bool> shouldStop;
 };
 
