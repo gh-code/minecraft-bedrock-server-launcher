@@ -358,20 +358,36 @@ void compression_worker(std::string folderPath, thread_safe_queue &queue,
         std::array<char, 512> header{};
         std::string fname = name;
         std::string prefix;
+        
+        // Handle paths longer than 100 characters using prefix field
         if (fname.size() > 100) {
-            auto slash_pos = fname.rfind('/', 155);
-            if (slash_pos != std::string::npos &&
-                    fname.size() - slash_pos - 1 <= 100 &&
-                    slash_pos <= 155) {
-                prefix = fname.substr(0, slash_pos);
-                fname = fname.substr(slash_pos + 1);
-            } else {
-                fname = fname.substr(fname.size() - 100);
+            // Find the last '/' in the path to split it properly
+            size_t slash_pos = fname.rfind('/');
+            if (slash_pos != std::string::npos) {
+                std::string path_part = fname.substr(0, slash_pos);
+                std::string file_part = fname.substr(slash_pos + 1);
+                
+                // If file part is <= 100 chars and path part is <= 155 chars, use both
+                if (file_part.size() <= 100 && path_part.size() <= 155) {
+                    prefix = path_part;
+                    fname = file_part;
+                } else if (path_part.size() > 155) {
+                    // If path is too long, recursively split it
+                    size_t pos = path_part.rfind('/', 155);
+                    if (pos != std::string::npos) {
+                        prefix = path_part.substr(0, pos);
+                        fname = path_part.substr(pos + 1) + "/" + file_part;
+                        // Trim fname to 100 if still too long
+                        if (fname.size() > 100) {
+                            fname = fname.substr(fname.size() - 100);
+                        }
+                    }
+                }
             }
         }
 
         if (fname.size() > 100) {
-            fname = fname.substr(0, 100);
+            fname = fname.substr(fname.size() - 100);
         }
         memcpy(header.data() + 0, fname.c_str(), fname.size());
         if (!prefix.empty()) {
@@ -431,6 +447,10 @@ void compression_worker(std::string folderPath, thread_safe_queue &queue,
             std::string relpath;
             try {
                 relpath = fs::relative(entry.path(), folderPath).string();
+                // Convert backslashes to forward slashes for tar format
+                for (char& c : relpath) {
+                    if (c == '\\') c = '/';
+                }
             } catch (...) {
                 relpath = entry.path().filename().string();
             }
